@@ -1,6 +1,6 @@
 # Malaria Diagnosis
 ## Introduction
-This project utilizes a CNN to detect whether a colored microscopic image contains malaria or not. Training data is present with the repository.
+This project utilizes a CNN to detect whether a colored microscopic image contains malaria or not.
 
 ## Training
 To train the model use the following command:
