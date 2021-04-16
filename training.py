@@ -1,5 +1,6 @@
 import os
 import time
+import glob
 import datetime
 import numpy as np
 import tensorflow as tf
@@ -12,22 +13,29 @@ from model_checkpoints import get_model, save_model
 from data_processing import get_image_batch, get_label_batch, data_preprocessing
 
 
+"""
+The training step where backpropagation happens
+Binary cross entropy is used to measure the loss since the model performs binary classification
+"""
 @tf.function
 def train_step(images, labels):
     with tf.GradientTape(persistent=True) as tape:
         output = model(images, training=True)
         loss = tf.keras.losses.binary_crossentropy(labels, output)
     gradients = tape.gradient(loss, model.trainable_variables)
-    model_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+    model_optimizer.apply_gradients(zip(gradients, model.trainable_variables)) # Model weights are optimized using Adam
     return loss
 
+
+# Batches are continously extracted and after data augmentation is performed, they are used for training
 def training_loop(x_train, y_train, N_TRAINING_DATA, BATCH_SIZE):
     for i in range(0, N_TRAINING_DATA, BATCH_SIZE):
-        r = np.random.randint(0,2,2)
-        batch_image = get_image_batch(x_train, i, BATCH_SIZE, r[0], r[1])
+        r = np.random.randint(0,2,2) # 2 Random numbers that determines whether the images are flipped around x & y or not
+        batch_image = get_image_batch(x_train, i, BATCH_SIZE, r[0], r[1]) # Where data augmentation happens
         batch_label = get_label_batch(y_train, i, BATCH_SIZE)
         model_loss = train_step(batch_image, batch_label).numpy().mean()
     return model_loss
+
 
 @tf.function
 def evaluation_loop(x_data, y_data):
@@ -35,20 +43,26 @@ def evaluation_loop(x_data, y_data):
     loss = tf.keras.losses.binary_crossentropy(y_data, output)
     return loss
 
+
 def main_loop(EPOCHS, BATCH_SIZE, LR):
 
     training_start = time.time()
 
+
+    # Obtain all data paths
     malaria_images    = glob.glob("dataset/malaria/*.jpg")
     no_malaria_images = glob.glob("dataset/no malaria/*.jpg")
 
+    # Obtain the data in pre-processed form
     data, labels = data_preprocessing(malaria_images, no_malaria_images)
 
+    # Split the data into training, validation and testing sets
     x_train, x_temp, y_train, y_temp = train_test_split(data, labels, test_size=0.2, random_state=42)
     x_validation, x_test, y_validation, y_test = train_test_split(x_temp, y_temp, test_size=0.5, random_state=42)
     
     data_splits = [[y_train, x_train], [y_validation, x_validation], [y_test, x_test]]
     clipped_data_splits = []
+    # Clip the data sets so that they are all divisible by the batch size number
     for i in range(len(data_splits)):
         data_split = data_splits[i]
         y_data = data_split[0]
@@ -69,12 +83,13 @@ def main_loop(EPOCHS, BATCH_SIZE, LR):
     log(no_data_log)
                 
     global model, model_optimizer
-    model, model_optimizer = get_model(LR_G)
+    model, model_optimizer, ckpt_manager = get_model(LR)
         
     epochs_plot = []
     training_loss_plot = []
     validation_loss_plot = []
 
+    # Begin the training cycle
     for epoch in range(EPOCHS):
 
         epoch_s_log = "Began epoch {} at {}".format(epoch, time.ctime())
@@ -95,6 +110,8 @@ def main_loop(EPOCHS, BATCH_SIZE, LR):
         #Validation
         validation_error = evaluation_loop(x_validation, y_validation.reshape(-1,1)).numpy().mean()
         validation_loss_plot.append(validation_error)
+        validation_log = "Validation Error = {}".format(validation_error)
+        log(validation_log)
         
         #Epoch Logging
         epochs_plot.append(epoch)
@@ -103,13 +120,19 @@ def main_loop(EPOCHS, BATCH_SIZE, LR):
         epoch_seconds = time.time() - epoch_start
         epoch_t_log = "Epoch took {}".format(datetime.timedelta(seconds=epoch_seconds))
         log(epoch_t_log)
-        
-        if epoch == 40:
+
+        # Freeze the non head layers 5 epochs before the last one
+        if epoch == EPOCHS-5:
             freezing_log = "Training only head layers from no on."
             log(freezing_log)
             for layer in model.layers[:-2]:
                 layer.trainable = False
+          
+        # Save model weights every 30 epochs
+        if (epoch + 1) % 30 == 0:
+            save_model(ckpt_manager, epoch)
             
+    save_model(ckpt_manager, epoch)
     plot_evaluations(epochs_plot, training_loss_plot, validation_loss_plot)
     #Testing
     test_error = evaluation_loop(x_test, y_test.reshape(-1,1)).numpy().mean()

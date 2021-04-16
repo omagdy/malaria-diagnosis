@@ -1,3 +1,5 @@
+import numpy as np
+import tensorflow as tf
 
 """
  Data Augmentation is done by randomly flipping every 
@@ -23,21 +25,17 @@ def get_label_batch(data, idx, BATCH_SIZE):
     sub_data = data[idx:idx+BATCH_SIZE].reshape(-1,1)
     return sub_data
 
+
+# Normalize data so that model doesnt get large inputs and converge faster
 def NormalizeData(data, min_value=0, max_value=255):
     return (data-min_value)/(max_value-min_value)
+
 
 def data_preprocessing(malaria_images, no_malaria_images):
     
     IMAGE_SIZE = 40
 
-    min_value = 0
-    max_value = no_malaria_images_data.max()
-    if malaria_images_data.max()>max_value:
-        max_value=malaria_images_data.max()
-
-    malaria_images_data    = np.empty((0,IMAGE_SIZE,IMAGE_SIZE,3), 'uint8')
-    no_malaria_images_data = np.empty((0,IMAGE_SIZE,IMAGE_SIZE,3), 'uint8')
-
+    # Initializing empty arrays for each class (malaria or non-malaria) and populate it with it with data
     numpy_arrays    = []
     all_image_files = [malaria_images, no_malaria_images]
     for image_files in all_image_files:
@@ -50,9 +48,10 @@ def data_preprocessing(malaria_images, no_malaria_images):
         numpy_arrays.append(numpy_array)
     malaria_images_data, no_malaria_images_data = numpy_arrays
 
-    malaria_images_data = NormalizeData(malaria_images_data, min_value, max_value)
-    no_malaria_images_data = NormalizeData(no_malaria_images_data, min_value, max_value)
+    malaria_images_data = NormalizeData(malaria_images_data)
+    no_malaria_images_data = NormalizeData(no_malaria_images_data)
 
+    # Create label data for each class
     malaria_images_label    = np.ones(malaria_images_data.shape[0])
     no_malaria_images_label = np.zeros(no_malaria_images_data.shape[0])
 

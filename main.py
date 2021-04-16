@@ -4,7 +4,7 @@ from training import main_loop
 def main():
 	args = training_parser().parse_args()
 
-	LR_G                  = args.learning_rate
+	LR                    = args.learning_rate
 	EPOCHS                = args.epochs
 	BATCH_SIZE            = args.batch_size
 	main_loop(EPOCHS, BATCH_SIZE, LR)

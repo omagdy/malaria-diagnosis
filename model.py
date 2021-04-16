@@ -2,7 +2,7 @@ import tensorflow as tf
 
 """
 Model weights are initialized using Xavier
-Relu is utilized as the activation layer for convolutions 
+Relu is utilized as the activation layer for convolutions to induce non-linearity
 Dropout is added to mitigate overfitting
 The last output layer has sigmoid as its activation function since we are performing binary classification
 """
