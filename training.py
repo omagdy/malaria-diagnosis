@@ -17,11 +17,12 @@ from data_processing import get_image_batch, get_label_batch, data_preprocessing
 The training step where backpropagation happens
 Binary cross entropy is used to measure the loss since the model performs binary classification
 """
+bce = tf.keras.losses.BinaryCrossentropy()
 @tf.function
 def train_step(images, labels):
     with tf.GradientTape(persistent=True) as tape:
         output = model(images, training=True)
-        loss = tf.keras.losses.binary_crossentropy(labels, output)
+        loss = bce(labels, output)
     gradients = tape.gradient(loss, model.trainable_variables)
     model_optimizer.apply_gradients(zip(gradients, model.trainable_variables)) # Model weights are optimized using Adam
     return loss
