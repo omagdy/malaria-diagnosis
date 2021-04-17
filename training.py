@@ -34,14 +34,14 @@ def training_loop(x_train, y_train, N_TRAINING_DATA, BATCH_SIZE):
         r = np.random.randint(0,2,2) # 2 Random numbers that determines whether the images are flipped around x & y or not
         batch_image = get_image_batch(x_train, i, BATCH_SIZE, r[0], r[1]) # Where data augmentation happens
         batch_label = get_label_batch(y_train, i, BATCH_SIZE)
-        model_loss = train_step(batch_image, batch_label).numpy().mean()
+        model_loss = train_step(batch_image, batch_label).numpy()
     return model_loss
 
 
 @tf.function
 def evaluation_loop(x_data, y_data):
     output = model(x_data, training=False)
-    loss = tf.keras.losses.binary_crossentropy(y_data, output)
+    loss = bce(y_data, output)
     return loss
 
 
@@ -109,7 +109,7 @@ def main_loop(EPOCHS, BATCH_SIZE, LR):
         y_train, x_train = shuffle(y_train, x_train)
         
         #Validation
-        validation_error = evaluation_loop(x_validation, y_validation.reshape(-1,1)).numpy().mean()
+        validation_error = evaluation_loop(x_validation, y_validation.reshape(-1,1)).numpy()
         validation_loss_plot.append(validation_error)
         validation_log = "Validation Error = {}".format(validation_error)
         log(validation_log)
@@ -136,7 +136,7 @@ def main_loop(EPOCHS, BATCH_SIZE, LR):
     save_model(ckpt_manager, epoch)
     plot_evaluations(epochs_plot, training_loss_plot, validation_loss_plot)
     #Testing
-    test_error = evaluation_loop(x_test, y_test.reshape(-1,1)).numpy().mean()
+    test_error = evaluation_loop(x_test, y_test.reshape(-1,1)).numpy()
     evaluation_log = "After training: Error = {}".format(test_error)
     log(evaluation_log)
     training_e_log = "Finished training at {}".format(time.ctime())
